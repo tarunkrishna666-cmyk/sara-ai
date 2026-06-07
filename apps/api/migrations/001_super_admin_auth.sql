@@ -1,0 +1,29 @@
+ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE users ADD COLUMN password_hash TEXT;
+ALTER TABLE users ADD COLUMN password_set INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK(kind = 'session'),
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id TEXT PRIMARY KEY,
+  actor_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  target_user_id TEXT,
+  details TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS system_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_by TEXT,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

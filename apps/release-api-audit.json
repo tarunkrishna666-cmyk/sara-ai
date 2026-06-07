@@ -1,0 +1,145 @@
+{
+  "passed": 17,
+  "total": 17,
+  "results": [
+    {
+      "name": "API health",
+      "passed": true,
+      "detail": {
+        "ms": 40
+      }
+    },
+    {
+      "name": "Database status",
+      "passed": true,
+      "detail": {
+        "database": "online",
+        "groq": "online",
+        "openrouter": "online",
+        "ollama": "configured"
+      }
+    },
+    {
+      "name": "Groq live configuration",
+      "passed": true,
+      "detail": "online"
+    },
+    {
+      "name": "OpenRouter live configuration",
+      "passed": true,
+      "detail": "online"
+    },
+    {
+      "name": "Ollama live configuration",
+      "passed": true,
+      "detail": "configured"
+    },
+    {
+      "name": "Super-admin live login",
+      "passed": true,
+      "detail": 200
+    },
+    {
+      "name": "Admin dashboard APIs",
+      "passed": true,
+      "detail": {
+        "dashboard": 200,
+        "users": 200,
+        "conversations": 200,
+        "brains": 200,
+        "rate-limits": 200,
+        "analytics": 200,
+        "system-health": 200,
+        "logs": 200,
+        "settings": 200
+      }
+    },
+    {
+      "name": "Unauthenticated admin protection",
+      "passed": true,
+      "detail": 403
+    },
+    {
+      "name": "10 simultaneous user registrations",
+      "passed": true,
+      "detail": {
+        "total_ms": 9884,
+        "codes": [
+          201,
+          201,
+          201,
+          201,
+          201,
+          201,
+          201,
+          201,
+          201,
+          201
+        ]
+      }
+    },
+    {
+      "name": "Default role is user",
+      "passed": true,
+      "detail": "user"
+    },
+    {
+      "name": "Regular user admin denial",
+      "passed": true,
+      "detail": 403
+    },
+    {
+      "name": "Duplicate email prevention",
+      "passed": true,
+      "detail": 409
+    },
+    {
+      "name": "Cross-user data isolation",
+      "passed": true,
+      "detail": 403
+    },
+    {
+      "name": "Live Ollama fallback streaming",
+      "passed": true,
+      "detail": {
+        "status": 200,
+        "ms": 401
+      }
+    },
+    {
+      "name": "Chat history persistence",
+      "passed": true,
+      "detail": {
+        "conversations": 1,
+        "messages": 2
+      }
+    },
+    {
+      "name": "Session and logout",
+      "passed": true,
+      "detail": {
+        "before": 200,
+        "logout": 204,
+        "after": 401
+      }
+    },
+    {
+      "name": "Anonymous rate limiting",
+      "passed": true,
+      "detail": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        429,
+        429
+      ]
+    }
+  ]
+}

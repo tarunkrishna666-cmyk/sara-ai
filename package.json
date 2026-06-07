@@ -1,0 +1,17 @@
+{
+  "name": "sara-ai-chatbot-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "sarA AI Chatbot MVP monorepo",
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "lint:web": "npm --workspace apps/web run lint"
+  },
+  "workspaces": [
+    "apps/web"
+  ],
+  "devDependencies": {
+    "@types/three": "^0.184.1"
+  }
+}

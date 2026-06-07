@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: sara-ai-api
+    env: python
+    rootDir: apps/api
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DB_PATH
+        value: ./data/sara.db
+      - key: DATABASE_URL
+        value: sqlite:///./data/sara.db
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: OLLAMA_TIMEOUT
+        value: "60"
+      - key: CORS_ORIGINS
+        value: https://app.sara-domain.com
+        sync: false
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+      - key: SUPER_ADMIN_EMAIL
+        value: tarunkrishn666@gmail.com
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SESSION_TTL_DAYS
+        value: "14"
+      - key: SETUP_TOKEN_TTL_MINUTES
+        value: "30"
+    healthCheckPath: /health
+    healthCheckIntervalSeconds: 10
+    healthCheckTimeoutSeconds: 5
+    healthCheckRestartThreshold: 2
+    disk:
+      name: sara-data
+      mountPath: /opt/render/project/src/apps/api/data
+      sizeGB: 1
