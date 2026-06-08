@@ -12,8 +12,6 @@ import {
   MessageSquareText,
   Settings,
   ShieldCheck,
-  UserCog,
-  Users,
 } from "lucide-react";
 
 import type { User } from "@/lib/types";
@@ -31,7 +29,13 @@ type Section =
   | "Logs"
   | "Settings";
 
-const sections = [
+interface SectionConfig {
+  name: Section;
+  icon: React.ComponentType<{ className?: string }>;
+  endpoint: string;
+}
+
+const sections: SectionConfig[] = [
   { name: "Dashboard", icon: LayoutDashboard, endpoint: "/dashboard" },
   { name: "Users", icon: Users, endpoint: "/users" },
   { name: "Conversations", icon: MessageSquareText, endpoint: "/conversations" },
@@ -57,7 +61,10 @@ export function AdminShell() {
     fetch(`${API_URL}/api/auth/me`, {
       credentials: "include",
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Unauthorized");
+        return r.json();
+      })
       .then((u) => {
         if (!u || !["admin", "super_admin"].includes(u.role)) {
           window.location.href = "/chat";
@@ -88,22 +95,33 @@ export function AdminShell() {
     fetch(`${API_URL}/api${endpoint}`, {
       credentials: "include",
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`Server returned status ${r.status}`);
+        }
+        return r.json();
+      })
       .then(setData)
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      });
   }, [ready, user, section]);
 
   /**
    * LOGOUT
    */
   async function logout() {
-    await fetch(`${API_URL}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-
-    sessionStorage.clear();
-    window.location.href = "/";
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout request failed:", err);
+    } finally {
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
   }
 
   if (!ready || !user) {
@@ -115,28 +133,40 @@ export function AdminShell() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-white text-gray-900">
       {/* SIDEBAR */}
-      <aside className="w-64 border-r p-4">
-        <div className="flex items-center gap-2 mb-6">
-          <Bot />
-          <span className="font-bold">sarA Admin</span>
-        </div>
+      <aside className="w-64 border-r p-4 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-6 px-2">
+            <Bot className="h-6 w-6 text-indigo-600" />
+            <span className="font-bold text-lg">sarA Admin</span>
+          </div>
 
-        {sections.map((s) => (
-          <button
-            key={s.name}
-            onClick={() => setSection(s.name)}
-            className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-100"
-          >
-            <s.icon className="h-4 w-4" />
-            {s.name}
-          </button>
-        ))}
+          <nav className="space-y-1">
+            {sections.map((s) => {
+              const Icon = s.icon;
+              const isActive = section === s.name;
+              return (
+                <button
+                  key={s.name}
+                  onClick={() => setSection(s.name)}
+                  className={`flex items-center gap-2 w-full p-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-600"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {s.name}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         <button
           onClick={logout}
-          className="mt-6 flex items-center gap-2 text-red-500"
+          className="mt-6 flex items-center gap-2 p-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors w-full"
         >
           <LogOut className="h-4 w-4" />
           Logout
@@ -144,16 +174,28 @@ export function AdminShell() {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 p-6">
-        <h1 className="text-xl font-bold mb-4">{section}</h1>
+      <main className="flex-1 p-6 bg-gray-50 overflow-auto">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-6">{section}</h1>
 
-        {error && (
-          <div className="text-red-500 mb-4">{error}</div>
-        )}
+          {error && (
+            <div className="p-4 mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
 
-        <pre className="bg-gray-100 p-4 rounded overflow-auto">
-          {JSON.stringify(data, null, 2)}
-        </pre>
+          <div className="bg-white border rounded-lg shadow-sm p-4">
+            {data ? (
+              <pre className="text-xs font-mono text-gray-800 overflow-auto max-h-[70vh]">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            ) : !error ? (
+              <div className="text-sm text-gray-500 animate-pulse">Loading data...</div>
+            ) : (
+              <div className="text-sm text-gray-400">No data available</div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
