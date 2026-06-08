@@ -32,6 +32,27 @@ request_logger = logging.getLogger("sara.requests")
 error_logger = logging.getLogger("sara.errors")
 
 
+# --- CORS CONFIGURATION (RESOLVES DOMAIN BLOCKS) ---
+origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
+    ).split(",")
+    if origin.strip()
+]
+
+# Explicitly guarantee production deployment paths are whitelisted
+production_urls = [
+    "https://sara-ai-k4ed8k2po-tarunkrishna666-cmyks-projects.vercel.app",
+    "https://sara-ai-web-git-main-tarunkrishna666-cmyks-projects.vercel.app",
+]
+
+for url in production_urls:
+    if url not in origins:
+        origins.append(url)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     startup_config = _validate_startup_environment()
@@ -65,17 +86,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(RateLimitMiddleware)
 
-origins = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
-    ).split(",")
-    if origin.strip()
-]
+# --- STRATEGIC MIDDLEWARE ORDERING (FIXES 400 OPTIONS BLOCK) ---
 
+# 1. CORSMiddleware MUST process incoming traffic first to cleanly clear browser preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -83,6 +97,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2. RateLimitMiddleware runs safely secondary once permissions are cleared
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.middleware("http")
