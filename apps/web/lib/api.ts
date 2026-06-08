@@ -1,6 +1,6 @@
 import type { AuthResponse, BrainStatus, ChatResponse, ChatStreamReady, Conversation, Message, User } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const API_URL = "https://sara-ai-wf20.onrender.com";
 const SESSION_TOKEN = "sara:access-token";
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
