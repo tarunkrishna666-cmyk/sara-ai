@@ -1,5 +1,13 @@
 const API_URL = "https://sara-ai-wf20.onrender.com";
 
+/**
+ * IMPORTANT:
+ * apiFetch should ONLY join base URL once.
+ */
+async function apiFetch(path: string, init?: RequestInit) {
+  return fetch(`${API_URL}${path}`, init);
+}
+
 export async function streamChatMessage(
   userId: string,
   message: string,
@@ -7,7 +15,8 @@ export async function streamChatMessage(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<ChatResponse> {
-  const response = await apiFetch(`${API_URL}/api/chat/stream`, {
+
+  const response = await apiFetch("/api/chat/stream", {
     method: "POST",
     credentials: "include",
     signal,
@@ -44,6 +53,7 @@ export async function streamChatMessage(
 
     for (const rawEvent of events) {
       if (!rawEvent.trim()) continue;
+
       const event = parseStreamEvent(rawEvent);
       if (!event) continue;
 
@@ -71,6 +81,9 @@ export async function streamChatMessage(
   return finalPayload;
 }
 
+/**
+ * SSE parser (unchanged but safe)
+ */
 function parseStreamEvent(rawEvent: string): { name: string; data: unknown } | null {
   let name = "message";
   const dataLines: string[] = [];
@@ -85,8 +98,12 @@ function parseStreamEvent(rawEvent: string): { name: string; data: unknown } | n
 
   if (!dataLines.length) return null;
 
-  return {
-    name,
-    data: JSON.parse(dataLines.join("\n")),
-  };
+  try {
+    return {
+      name,
+      data: JSON.parse(dataLines.join("\n")),
+    };
+  } catch {
+    return null;
+  }
 }
