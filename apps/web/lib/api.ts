@@ -1,5 +1,8 @@
 const API_URL = "https://sara-ai-wf20.onrender.com";
 
+/**
+ * Generic API helper (ONLY ONE YOU NEED)
+ */
 export async function apiFetch(path: string, options?: RequestInit) {
   const res = await fetch(`${API_URL}${path}`, {
     credentials: "include",
@@ -11,43 +14,13 @@ export async function apiFetch(path: string, options?: RequestInit) {
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error?.detail || "API request failed");
+    let errorData: any = {};
+    try {
+      errorData = await res.json();
+    } catch {}
+
+    throw new Error(errorData?.detail || "API request failed");
   }
 
   return res.json();
-}
-
-/* OPTIONAL SAFE HELPERS (used by admin) */
-
-export async function getCurrentUser() {
-  return apiFetch("/api/auth/me");
-}
-
-export async function adminRequest(path: string, options?: RequestInit) {
-  return fetch(`${API_URL}/api${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
-    ...options,
-  }).then(async (res) => {
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.detail || "Admin request failed");
-    }
-    return res.json();
-  });
-}
-
-export async function logout() {
-  return fetch(`${API_URL}/api/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
-}
-
-export function clearAccessToken() {
-  sessionStorage.removeItem("sara:access-token");
 }
