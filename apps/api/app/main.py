@@ -46,6 +46,7 @@ origins = [
 production_urls = [
     "https://sara-ai-k4ed8k2po-tarunkrishna666-cmyks-projects.vercel.app",
     "https://sara-ai-web-git-main-tarunkrishna666-cmyks-projects.vercel.app",
+    "https://sara-ai-web-six.vercel.app",
 ]
 
 for url in production_urls:
