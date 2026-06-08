@@ -21,7 +21,7 @@ type Section =
   | "Logs"
   | "Settings";
 
-const sections: Array<{ name: Section; icon: typeof Activity; endpoint: string }> = [
+const sections = [
   { name: "Dashboard", icon: LayoutDashboard, endpoint: "/dashboard" },
   { name: "Users", icon: Users, endpoint: "/users" },
   { name: "Conversations", icon: MessageSquareText, endpoint: "/conversations" },
@@ -35,36 +35,34 @@ const sections: Array<{ name: Section; icon: typeof Activity; endpoint: string }
 
 export function AdminShell() {
   const [section, setSection] = useState<Section>("Dashboard");
-  const [data, setData] = useState<unknown>(null);
+  const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
   const [user, setUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  // GET CURRENT USER
+  // GET USER
   useEffect(() => {
     fetch(`${API_URL}/api/auth/me`, {
       credentials: "include",
     })
-      .then((res) => res.json())
-      .then((currentUser) => {
-        if (!["admin", "super_admin"].includes(currentUser.role)) {
-          window.location.replace("/chat");
+      .then((r) => r.json())
+      .then((u) => {
+        if (!["admin", "super_admin"].includes(u.role)) {
+          window.location.href = "/chat";
           return;
         }
-        sessionStorage.setItem("sara:user", JSON.stringify(currentUser));
-        setUser(currentUser);
+        setUser(u);
       })
-      .catch(() => window.location.replace("/"))
-      .finally(() => setAuthReady(true));
+      .catch(() => (window.location.href = "/"))
+      .finally(() => setReady(true));
   }, []);
 
-  // LOAD ADMIN DATA
+  // LOAD DATA
   useEffect(() => {
-    if (!authReady || !user) return;
+    if (!ready || !user) return;
 
     const endpoint =
-      sections.find((item) => item.name === section)?.endpoint || "/dashboard";
+      sections.find((s) => s.name === section)?.endpoint || "/dashboard";
 
     setData(null);
     setError("");
@@ -72,158 +70,69 @@ export function AdminShell() {
     fetch(`${API_URL}/api${endpoint}`, {
       credentials: "include",
     })
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then(setData)
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Admin access denied");
-      });
-  }, [authReady, user, section, refreshKey]);
+      .catch((e) => setError(e.message));
+  }, [ready, user, section]);
 
   // LOGOUT
   async function logout() {
     await fetch(`${API_URL}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
-    }).catch(() => undefined);
+    });
 
-    sessionStorage.removeItem("sara:user");
-    window.location.assign("/");
+    sessionStorage.clear();
+    window.location.href = "/";
   }
 
-  if (!authReady || !user) {
+  if (!ready || !user) {
     return (
-      <main className="auth-page">
-        <div className="auth-logo animate-pulse">
-          <Bot className="h-7 w-7 text-[var(--primary)]" />
-        </div>
-      </main>
+      <div className="flex h-screen items-center justify-center">
+        <Bot className="animate-pulse h-8 w-8" />
+      </div>
     );
   }
 
   return (
-    <main className="admin-layout">
-      <aside className="admin-sidebar">
-        <div className="flex items-center gap-3 px-2">
-          <Bot className="h-7 w-7 text-[var(--primary)]" />
-          <div>
-            <p className="font-semibold">sarA Admin</p>
-            <p className="text-xs text-[var(--muted)]">{user.role}</p>
-          </div>
+    <div className="flex min-h-screen">
+      {/* SIDEBAR */}
+      <aside className="w-64 p-4 border-r">
+        <div className="flex items-center gap-2 mb-6">
+          <Bot />
+          <span className="font-bold">sarA Admin</span>
         </div>
 
-        <nav className="mt-7 grid gap-1">
-          {sections.map(({ name, icon: Icon }) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setSection(name)}
-              className={`nav-item ${section === name ? "nav-item-active" : ""}`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{name}</span>
-            </button>
-          ))}
-        </nav>
+        {sections.map((s) => (
+          <button
+            key={s.name}
+            onClick={() => setSection(s.name)}
+            className="flex items-center gap-2 w-full p-2 text-left"
+          >
+            <s.icon className="h-4 w-4" />
+            {s.name}
+          </button>
+        ))}
 
         <button
-          type="button"
-          onClick={() => void logout()}
-          className="danger-button mt-auto"
+          onClick={logout}
+          className="mt-6 flex items-center gap-2 text-red-500"
         >
           <LogOut className="h-4 w-4" />
-          Log out
+          Logout
         </button>
       </aside>
 
-      <section className="admin-main">
-        <header className="admin-header">
-          <div>
-            <p className="eyebrow">Role-based administration</p>
-            <h1 className="page-title">{section}</h1>
-          </div>
-          <div className="status-pill">
-            <UserCog className="h-4 w-4" />
-            {user.identifier}
-          </div>
-        </header>
+      {/* MAIN */}
+      <main className="flex-1 p-6">
+        <h1 className="text-xl font-bold mb-4">{section}</h1>
 
-        {error ? (
-          <div className="error-banner rounded-2xl p-4">{error}</div>
-        ) : null}
+        {error && <p className="text-red-500">{error}</p>}
 
-        <AdminContent
-          section={section}
-          data={data}
-          user={user}
-          onRefresh={() => setRefreshKey((v) => v + 1)}
-        />
-      </section>
-    </main>
-  );
-}
-
-/* ---------------- CONTENT ---------------- */
-
-function AdminContent({
-  section,
-  data,
-  user,
-  onRefresh,
-}: {
-  section: Section;
-  data: unknown;
-  user: User | null;
-  onRefresh: () => void;
-}) {
-  if (!data)
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-36 rounded-3xl" />
-        ))}
-      </div>
-    );
-
-  if (Array.isArray(data))
-    return <DataTable rows={data as Array<Record<string, unknown>>} />;
-
-  return <ObjectCards data={data as Record<string, unknown>} />;
-}
-
-/* ---------------- TABLE ---------------- */
-
-function DataTable({ rows }: { rows: Array<Record<string, unknown>> }) {
-  return (
-    <div className="grid gap-3">
-      {rows.map((row, i) => (
-        <pre
-          key={String(row.id || i)}
-          className="content-card overflow-x-auto whitespace-pre-wrap text-xs leading-6"
-        >
-          {JSON.stringify(row, null, 2)}
+        <pre className="bg-gray-100 p-4 rounded">
+          {JSON.stringify(data, null, 2)}
         </pre>
-      ))}
-    </div>
-  );
-}
-
-/* ---------------- CARDS ---------------- */
-
-function ObjectCards({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {Object.entries(data).map(([key, value]) => (
-        <article key={key} className="metric-card">
-          <p className="text-sm text-[var(--muted)] capitalize">
-            {key.replaceAll("_", " ")}
-          </p>
-          <p className="mt-4 text-2xl font-semibold break-words">
-            {typeof value === "object"
-              ? JSON.stringify(value)
-              : String(value)}
-          </p>
-        </article>
-      ))}
+      </main>
     </div>
   );
 }
