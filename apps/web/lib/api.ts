@@ -1,109 +1,53 @@
 const API_URL = "https://sara-ai-wf20.onrender.com";
 
-/**
- * IMPORTANT:
- * apiFetch should ONLY join base URL once.
- */
-async function apiFetch(path: string, init?: RequestInit) {
-  return fetch(`${API_URL}${path}`, init);
-}
-
-export async function streamChatMessage(
-  userId: string,
-  message: string,
-  conversationId: string | undefined,
-  handlers: StreamHandlers,
-  signal?: AbortSignal,
-): Promise<ChatResponse> {
-
-  const response = await apiFetch("/api/chat/stream", {
-    method: "POST",
+export async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    signal,
     headers: {
       "Content-Type": "application/json",
-      Accept: "text/event-stream",
-      ...(sessionStorage.getItem(SESSION_TOKEN)
-        ? { Authorization: `Bearer ${sessionStorage.getItem(SESSION_TOKEN)}` }
-        : {}),
+      ...(options?.headers || {}),
     },
-    body: JSON.stringify({
-      userId,
-      message,
-      conversationId,
-    }),
+    ...options,
   });
 
-  if (!response.ok || !response.body) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || body.message || body.error || "Request failed");
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error?.detail || "API request failed");
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let finalPayload: ChatResponse | null = null;
-
-  while (true) {
-    const { value, done } = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-
-    const events = buffer.split(/\r?\n\r?\n/);
-    buffer = events.pop() || "";
-
-    for (const rawEvent of events) {
-      if (!rawEvent.trim()) continue;
-
-      const event = parseStreamEvent(rawEvent);
-      if (!event) continue;
-
-      if (event.name === "ready") {
-        handlers.onReady?.(event.data as ChatStreamReady);
-      } else if (event.name === "token") {
-        const token = (event.data as { content?: unknown }).content;
-        if (typeof token === "string") handlers.onToken?.(token);
-      } else if (event.name === "final") {
-        finalPayload = event.data as ChatResponse;
-        handlers.onFinal?.(finalPayload);
-      } else if (event.name === "error") {
-        const detail = (event.data as { detail?: unknown }).detail;
-        throw new Error(typeof detail === "string" ? detail : "sarA could not reply");
-      }
-    }
-
-    if (done) break;
-  }
-
-  if (!finalPayload) {
-    throw new Error("sarA response ended before it was saved");
-  }
-
-  return finalPayload;
+  return res.json();
 }
 
-/**
- * SSE parser (unchanged but safe)
- */
-function parseStreamEvent(rawEvent: string): { name: string; data: unknown } | null {
-  let name = "message";
-  const dataLines: string[] = [];
+/* OPTIONAL SAFE HELPERS (used by admin) */
 
-  for (const line of rawEvent.split(/\r?\n/)) {
-    if (line.startsWith("event:")) {
-      name = line.slice("event:".length).trim();
-    } else if (line.startsWith("data:")) {
-      dataLines.push(line.slice("data:".length).trimStart());
+export async function getCurrentUser() {
+  return apiFetch("/api/auth/me");
+}
+
+export async function adminRequest(path: string, options?: RequestInit) {
+  return fetch(`${API_URL}/api${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {}),
+    },
+    ...options,
+  }).then(async (res) => {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.detail || "Admin request failed");
     }
-  }
+    return res.json();
+  });
+}
 
-  if (!dataLines.length) return null;
+export async function logout() {
+  return fetch(`${API_URL}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
 
-  try {
-    return {
-      name,
-      data: JSON.parse(dataLines.join("\n")),
-    };
-  } catch {
-    return null;
-  }
+export function clearAccessToken() {
+  sessionStorage.removeItem("sara:access-token");
 }
