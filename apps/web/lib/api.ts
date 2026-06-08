@@ -1,6 +1,7 @@
 import type { AuthResponse, BrainStatus, ChatResponse, ChatStreamReady, Conversation, Message, User } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+// Fallback safely to your live Render endpoint if the environment variable isn't injected
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://sara-ai-wf20.onrender.com";
 const SESSION_TOKEN = "sara:access-token";
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -101,11 +102,15 @@ export function getMessages(conversationId: string, userId: string): Promise<Mes
 async function requestWithDeviceCache<T>(path: string, cacheKey: string): Promise<T> {
   try {
     const data = await request<T>(path);
-    localStorage.setItem(cacheKey, JSON.stringify(data));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+    }
     return data;
   } catch (error) {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) return JSON.parse(cached) as T;
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached) as T;
+    }
     throw error;
   }
 }
@@ -167,7 +172,7 @@ export async function streamChatMessage(
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
-      ...(sessionStorage.getItem(SESSION_TOKEN)
+      ...(typeof window !== "undefined" && sessionStorage.getItem(SESSION_TOKEN)
         ? { Authorization: `Bearer ${sessionStorage.getItem(SESSION_TOKEN)}` }
         : {}),
     },
