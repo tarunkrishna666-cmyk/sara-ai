@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from "react";
 import {
-  Activity, Bot, BrainCircuit, Gauge, HeartPulse, LayoutDashboard, LogOut,
-  MessageSquareText, Settings, ShieldCheck, SlidersHorizontal, UserCog, Users,
+  Activity,
+  Bot,
+  BrainCircuit,
+  Gauge,
+  HeartPulse,
+  LayoutDashboard,
+  LogOut,
+  MessageSquareText,
+  Settings,
+  ShieldCheck,
+  UserCog,
+  Users,
 } from "lucide-react";
 
 import type { User } from "@/lib/types";
@@ -40,24 +50,32 @@ export function AdminShell() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
-  // GET USER
+  /**
+   * GET CURRENT USER
+   */
   useEffect(() => {
     fetch(`${API_URL}/api/auth/me`, {
       credentials: "include",
     })
       .then((r) => r.json())
       .then((u) => {
-        if (!["admin", "super_admin"].includes(u.role)) {
+        if (!u || !["admin", "super_admin"].includes(u.role)) {
           window.location.href = "/chat";
           return;
         }
+
         setUser(u);
+        sessionStorage.setItem("sara:user", JSON.stringify(u));
       })
-      .catch(() => (window.location.href = "/"))
+      .catch(() => {
+        window.location.href = "/";
+      })
       .finally(() => setReady(true));
   }, []);
 
-  // LOAD DATA
+  /**
+   * LOAD SECTION DATA
+   */
   useEffect(() => {
     if (!ready || !user) return;
 
@@ -72,10 +90,12 @@ export function AdminShell() {
     })
       .then((r) => r.json())
       .then(setData)
-      .catch((e) => setError(e.message));
+      .catch((err) => setError(err.message));
   }, [ready, user, section]);
 
-  // LOGOUT
+  /**
+   * LOGOUT
+   */
   async function logout() {
     await fetch(`${API_URL}/api/auth/logout`, {
       method: "POST",
@@ -97,7 +117,7 @@ export function AdminShell() {
   return (
     <div className="flex min-h-screen">
       {/* SIDEBAR */}
-      <aside className="w-64 p-4 border-r">
+      <aside className="w-64 border-r p-4">
         <div className="flex items-center gap-2 mb-6">
           <Bot />
           <span className="font-bold">sarA Admin</span>
@@ -107,7 +127,7 @@ export function AdminShell() {
           <button
             key={s.name}
             onClick={() => setSection(s.name)}
-            className="flex items-center gap-2 w-full p-2 text-left"
+            className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-100"
           >
             <s.icon className="h-4 w-4" />
             {s.name}
@@ -127,9 +147,11 @@ export function AdminShell() {
       <main className="flex-1 p-6">
         <h1 className="text-xl font-bold mb-4">{section}</h1>
 
-        {error && <p className="text-red-500">{error}</p>}
+        {error && (
+          <div className="text-red-500 mb-4">{error}</div>
+        )}
 
-        <pre className="bg-gray-100 p-4 rounded">
+        <pre className="bg-gray-100 p-4 rounded overflow-auto">
           {JSON.stringify(data, null, 2)}
         </pre>
       </main>
